@@ -1,37 +1,75 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { LIVE_POLL_MS } from "@/lib/liveChat";
 import { SendIcon } from "./Icons";
-import { site } from "@/config/site";
 
 const API_URL = process.env.NEXT_PUBLIC_MAIL_API_URL || "http://localhost:4000";
+const LIVE_SESSION_KEY = "conext_live_session_id";
+const ASSISTANT_REPLY_THRESHOLD = 3;
+
+type ChatMode = "assistant" | "live";
+type MessageRole = "user" | "assistant" | "support" | "system";
 
 type ChatMessage = {
   id: string;
-  role: "user" | "assistant";
+  role: MessageRole;
+  content: string;
+};
+
+type LiveMessage = {
+  id: string;
+  sender: "user" | "admin" | "system";
   content: string;
 };
 
 const WELCOME: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content: `Hi, I'm the CoNext Assistant. How can I help you today?`
+  content: "Hi, I'm the CoNext Assistant. How can I help you today?"
 };
 
+function liveToUiMessage(message: LiveMessage): ChatMessage {
+  if (message.sender === "admin") {
+    return { id: message.id, role: "support", content: message.content };
+  }
+  if (message.sender === "system") {
+    return { id: message.id, role: "system", content: message.content };
+  }
+  return { id: message.id, role: "user", content: message.content };
+}
+
 export function AssistWidget() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<ChatMode>("assistant");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [sending, setSending] = useState(false);
+  const [connectingLive, setConnectingLive] = useState(false);
   const [error, setError] = useState("");
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const lastLiveMessageIdRef = useRef("");
+  const pollAbortRef = useRef<AbortController | null>(null);
+
+  const focusInput = useCallback(() => {
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
+  const assistantReplyCount = messages.filter(
+    (message) => message.role === "assistant" && message.id !== "welcome"
+  ).length;
+  const showLiveButton = mode === "assistant" && assistantReplyCount >= ASSISTANT_REPLY_THRESHOLD;
 
   useEffect(() => {
     if (!open) return;
     const node = listRef.current;
     if (node) node.scrollTop = node.scrollHeight;
-  }, [messages, open, sending]);
+  }, [messages, open, sending, connectingLive]);
 
   useEffect(() => {
     if (!open) return;
@@ -42,11 +80,101 @@ export function AssistWidget() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || sending) return;
+  const appendLiveMessages = useCallback((liveMessages: LiveMessage[]) => {
+    if (!liveMessages.length) return;
+    setMessages((prev) => {
+      const known = new Set(prev.map((message) => message.id));
+      const next = liveMessages
+        .filter((message) => !known.has(message.id))
+        .map(liveToUiMessage);
+      if (!next.length) return prev;
+      return [...prev, ...next];
+    });
+    const latest = liveMessages[liveMessages.length - 1];
+    if (latest?.id) {
+      lastLiveMessageIdRef.current = latest.id;
+    }
+  }, []);
 
+  const syncLiveMessages = useCallback(async () => {
+    if (!liveSessionId) return;
+
+    pollAbortRef.current?.abort();
+    const controller = new AbortController();
+    pollAbortRef.current = controller;
+
+    try {
+      const query = new URLSearchParams({
+        sessionId: liveSessionId,
+        after: lastLiveMessageIdRef.current
+      });
+      const response = await fetch(`${API_URL}/api/live/poll?${query.toString()}`, {
+        signal: controller.signal
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Unable to receive live messages.");
+      }
+      appendLiveMessages(result.messages || []);
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        setError(err.message);
+      }
+    }
+  }, [appendLiveMessages, liveSessionId]);
+
+  useEffect(() => {
+    if (mode !== "live" || !liveSessionId || !open) {
+      pollAbortRef.current?.abort();
+      return;
+    }
+
+    void syncLiveMessages();
+    const timer = window.setInterval(() => {
+      void syncLiveMessages();
+    }, LIVE_POLL_MS);
+
+    return () => {
+      pollAbortRef.current?.abort();
+      window.clearInterval(timer);
+    };
+  }, [liveSessionId, mode, open, syncLiveMessages]);
+
+  async function startLiveChat() {
+    setConnectingLive(true);
+    setError("");
+
+    try {
+      const context = messages
+        .filter((message) => message.id !== "welcome")
+        .slice(-6)
+        .map((message) => `${message.role}: ${message.content}`);
+
+      const response = await fetch(`${API_URL}/api/live/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ context })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok || !result.session?.id) {
+        throw new Error(result.error || "Unable to connect to support right now.");
+      }
+
+      const sessionId = String(result.session.id);
+      const liveMessages = (result.session.messages || []) as LiveMessage[];
+
+      setLiveSessionId(sessionId);
+      sessionStorage.setItem(LIVE_SESSION_KEY, sessionId);
+      setMode("live");
+      appendLiveMessages(liveMessages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to connect to support right now.");
+    } finally {
+      setConnectingLive(false);
+    }
+  }
+
+  async function submitAssistant(text: string) {
     const userMessage: ChatMessage = {
       id: `u-${Date.now()}`,
       role: "user",
@@ -54,7 +182,6 @@ export function AssistWidget() {
     };
     const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
-    setInput("");
     setSending(true);
     setError("");
 
@@ -81,8 +208,67 @@ export function AssistWidget() {
       setError(err instanceof Error ? err.message : "Unable to reply right now.");
     } finally {
       setSending(false);
+      focusInput();
     }
   }
+
+  async function submitLive(text: string) {
+    if (!liveSessionId) return;
+
+    const tempId = `temp-${Date.now()}`;
+    setMessages((prev) => [...prev, { id: tempId, role: "user", content: text }]);
+    setSending(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_URL}/api/live/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: liveSessionId,
+          sender: "user",
+          content: text
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Unable to send message right now.");
+      }
+
+      setMessages((prev) => prev.filter((message) => message.id !== tempId));
+      appendLiveMessages((result.session?.messages || []) as LiveMessage[]);
+      void syncLiveMessages();
+    } catch (err) {
+      setMessages((prev) => prev.filter((message) => message.id !== tempId));
+      setError(err instanceof Error ? err.message : "Unable to send message right now.");
+    } finally {
+      setSending(false);
+      focusInput();
+    }
+  }
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || sending || connectingLive) return;
+
+    setInput("");
+    if (mode === "live") {
+      await submitLive(text);
+      return;
+    }
+    await submitAssistant(text);
+  }
+
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
+
+  const panelTitle = mode === "live" ? "Live Support" : "CoNext Assistant";
+  const panelDescription =
+    mode === "live"
+      ? "You are chatting with our support team in real time."
+      : "AI guide for services, partnerships, and how we work.";
 
   return (
     <div className="assist-root">
@@ -97,8 +283,8 @@ export function AssistWidget() {
           <section className="assist-panel" aria-label="CoNext Assistant chat" role="dialog" aria-modal="true">
             <header className="assist-panel-header">
               <div>
-                <strong>CoNext Assistant</strong>
-                <p>AI guide for services, partnerships, and how we work.</p>
+                <strong>{panelTitle}</strong>
+                <p>{panelDescription}</p>
               </div>
             </header>
 
@@ -111,26 +297,45 @@ export function AssistWidget() {
                   <p>{message.content}</p>
                 </div>
               ))}
-              {sending && (
+              {(sending || connectingLive) && mode === "assistant" && (
                 <div className="assist-bubble assist-bubble-assistant assist-typing" aria-live="polite">
-                  <span/><span/><span/>
+                  <span /><span /><span />
+                </div>
+              )}
+              {connectingLive && (
+                <div className="assist-bubble assist-bubble-system" aria-live="polite">
+                  <p>Connecting you with our support team…</p>
                 </div>
               )}
             </div>
+
+            {showLiveButton && (
+              <div className="assist-live-action">
+                <button
+                  type="button"
+                  className="button assist-live-button"
+                  onClick={() => void startLiveChat()}
+                  disabled={connectingLive}
+                >
+                  Live chat with support team
+                </button>
+              </div>
+            )}
 
             <form className="assist-chat-form" onSubmit={submit}>
               {error && <p className="assist-chat-error" role="alert">{error}</p>}
               <div className="assist-chat-composer">
                 <input
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about CoNext…"
-                  disabled={sending}
+                  placeholder={mode === "live" ? "Message support…" : "Ask about CoNext…"}
+                  disabled={connectingLive}
                   aria-label="Message"
                   maxLength={2000}
                 />
-                <button className="button" type="submit" disabled={sending || !input.trim()} aria-label="Send message">
-                  <SendIcon/>
+                <button className="button" type="submit" disabled={sending || connectingLive || !input.trim()} aria-label="Send message">
+                  <SendIcon />
                 </button>
               </div>
             </form>

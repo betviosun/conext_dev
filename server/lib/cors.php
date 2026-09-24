@@ -13,8 +13,8 @@ function apply_cors(): void
         header('Vary: Origin');
     }
 
-    header('Access-Control-Allow-Methods: POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
 }
 
 function handle_preflight(): void

@@ -123,6 +123,38 @@ OPENAI_MODEL=openai/gpt-4o-mini
 
 Chat requests go to `POST /api/assist`. Knowledge used by the assistant lives in `server/businessKnowledge.php`.
 
+### Live support chat
+
+After the assistant replies 3 times, visitors see a **Live chat with support team** button. That opens a real-time queue connected to the same chat panel.
+
+1. Set an admin token in `server/.env`:
+
+```bash
+LIVE_CHAT_ADMIN_TOKEN=your-long-random-secret
+```
+
+2. Open the admin page while both servers are running:
+
+```text
+http://localhost:3000/admin/live
+```
+
+A standalone PHP admin page is also available at `http://localhost:4000/admin/live.php`.
+
+3. Paste the same token, pick a waiting chat, and reply. Messages appear in the visitor panel in real time via long polling.
+
+Live chat API routes:
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/live/start` | Visitor starts a live session |
+| `POST /api/live/message` | Send a user or admin message |
+| `GET /api/live/poll` | Long-poll for new messages |
+| `GET /api/live/sessions` | Admin list of active chats |
+| `GET /api/live/session?id=...` | Admin load one chat |
+
+Sessions are stored under `server/data/live/`.
+
 ## Deployment
 
 The project can be deployed to Vercel, Netlify with Next.js support, or any Node.js server capable of running Next.js.
