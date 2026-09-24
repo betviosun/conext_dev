@@ -1,4 +1,8 @@
-export const businessKnowledge = `
+<?php
+
+declare(strict_types=1);
+
+const BUSINESS_KNOWLEDGE = <<<'TEXT'
 Company: CoNext
 Tagline: Let's build a brighter tomorrow.
 Base: Philippines (Brgy. Bel-Air, Makati City 1226, Philippines); also works with United States and global partners.
@@ -49,9 +53,11 @@ Website pages users can visit:
 - /services
 - /partnership
 - /contact
-`.trim();
+TEXT;
 
-export const assistSystemPrompt = `
+function assist_system_prompt(): string
+{
+    $prompt = <<<'PROMPT'
 You are CoNext Assist, the official website assistant for CoNext.
 Answer helpfully, professionally, and concisely about CoNext's business only.
 Use the company knowledge below. If asked something outside that knowledge, say you are unsure and suggest contacting the team via the Contact page or email ryan@xconext.studio.
@@ -60,5 +66,7 @@ Encourage legitimate, transparent collaboration. Never assist with identity frau
 Keep answers short (usually 2-5 sentences). When useful, point users to /services, /partnership, /about, or /contact.
 
 COMPANY KNOWLEDGE:
-${businessKnowledge}
-`.trim();
+PROMPT;
+
+    return trim($prompt . BUSINESS_KNOWLEDGE);
+}

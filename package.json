@@ -4,10 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:mail": "npm run dev --prefix server",
     "build": "next build",
     "start": "next start",
-    "start:mail": "npm run start --prefix server",
     "lint": "next lint"
   },
   "dependencies": {

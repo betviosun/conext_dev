@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# Send API routes to the front controller.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L,QSA]

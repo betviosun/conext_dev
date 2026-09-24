@@ -8,7 +8,7 @@ A responsive Next.js company website based on the CoNext light-blue brand.
 - About page
 - Services page
 - Partnership / commercial-model page
-- Contact page with a form that saves enquiries through a separate Express contact server
+- Contact page with a form that saves enquiries through a separate PHP contact server
 - CoNext brand logo and handshake hero banner
 - Mobile navigation-friendly layout
 - SEO metadata / Open Graph image
@@ -53,7 +53,9 @@ Contact icons are under `public/icons/`.
 
 ## Contact form
 
-The contact form posts to a separate Express server (`server/`), which saves each enquiry to a CSV file.
+The contact form posts to a separate PHP server (`server/`), which saves each enquiry to a CSV file.
+
+Requirements: PHP 8.1+ with the `curl` extension enabled.
 
 ### 1. Configure
 
@@ -62,14 +64,20 @@ cp server/.env.example server/.env
 cp .env.local.example .env.local
 ```
 
-### 2. Install and run the contact server
+### 2. Run the PHP API server
 
 ```bash
-cd server && npm install && cd ..
-npm run dev:mail
+chmod +x server/start.sh
+./server/start.sh
 ```
 
-### 3. Run the website
+Or directly:
+
+```bash
+cd server && php -S localhost:4000 router.php
+```
+
+### 3. Run the website (separate terminal)
 
 ```bash
 npm run dev
@@ -80,9 +88,7 @@ Contact API: `http://localhost:4000`
 
 Production:
 
-```bash
-npm run start:mail
-```
+Deploy the `server/` directory to a PHP host (Apache or nginx + PHP-FPM). Point the API URL at that host, or serve it from a path such as `/api` on the same domain.
 
 Set `FRONTEND_ORIGIN` to your live site origin(s), and `NEXT_PUBLIC_MAIL_API_URL` to the public contact-server URL.
 
@@ -113,9 +119,9 @@ OPENAI_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_MODEL=openai/gpt-4o-mini
 ```
 
-2. Restart the contact server (`npm run dev:mail`).
+2. Restart the PHP server (`./server/start.sh`).
 
-Chat requests go to `POST /api/assist`. Knowledge used by the assistant lives in `server/businessKnowledge.js`.
+Chat requests go to `POST /api/assist`. Knowledge used by the assistant lives in `server/businessKnowledge.php`.
 
 ## Deployment
 
