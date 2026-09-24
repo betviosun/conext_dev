@@ -9,6 +9,7 @@ require_once __DIR__ . '/lib/rate_limit.php';
 require_once __DIR__ . '/lib/csv_store.php';
 require_once __DIR__ . '/lib/assist_chat.php';
 require_once __DIR__ . '/lib/live_chat.php';
+require_once __DIR__ . '/lib/job_applications.php';
 
 load_env(__DIR__ . '/.env');
 apply_cors();
@@ -157,6 +158,50 @@ if ($method === 'POST' && $path === '/api/assist') {
     } catch (Throwable $error) {
         error_log('[assist] ' . $error->getMessage());
         json_response(['ok' => false, 'error' => 'Unable to reply right now.'], 500);
+    }
+}
+
+if ($method === 'POST' && $path === '/api/jobs/apply') {
+    $ip = client_ip();
+    if (rate_limited($ip)) {
+        json_response(['ok' => false, 'error' => 'Too many requests. Please try again shortly.'], 429);
+    }
+
+    try {
+        if (!empty($_POST['website'])) {
+            json_response(['ok' => true]);
+        }
+
+        $jobToken = clean_string($_POST['jobToken'] ?? '', 32);
+        $jobTitle = clean_string($_POST['jobTitle'] ?? '', 180);
+        $name = clean_string($_POST['name'] ?? '', 120);
+        $email = clean_string($_POST['email'] ?? '', 180);
+        $phone = clean_string($_POST['phone'] ?? '', 40);
+        $message = trim((string) ($_POST['message'] ?? ''));
+        if (strlen($message) > 3000) {
+            $message = substr($message, 0, 3000);
+        }
+
+        if ($jobToken === '' || $name === '' || $email === '') {
+            json_response(['ok' => false, 'error' => 'Name, email, and job reference are required.'], 400);
+        }
+
+        if (!is_email($email)) {
+            json_response(['ok' => false, 'error' => 'Please provide a valid email address.'], 400);
+        }
+
+        $resume = $_FILES['resume'] ?? null;
+        if (!is_array($resume)) {
+            json_response(['ok' => false, 'error' => 'Please upload your resume.'], 400);
+        }
+
+        $record = save_job_application($jobToken, $jobTitle, $name, $email, $phone, $message, $resume, $ip);
+        json_response(['ok' => true, 'id' => $record['id']]);
+    } catch (InvalidArgumentException $error) {
+        json_response(['ok' => false, 'error' => $error->getMessage()], 400);
+    } catch (Throwable $error) {
+        error_log('[job-apply] ' . $error->getMessage());
+        json_response(['ok' => false, 'error' => 'Unable to submit your application right now.'], 500);
     }
 }
 

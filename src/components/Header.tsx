@@ -18,7 +18,14 @@ export function Header() {
         <nav className="nav-links" aria-label="Primary navigation">
           {nav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
         </nav>
-        <Link href="/contact" className="button button-small">Start a conversation</Link>
+        <div className="nav-actions">
+          <Link href="/live-jobs" className="nav-live-jobs">
+            <span className="nav-live-dot" aria-hidden="true" />
+            Live Jobs
+          </Link>
+          <Link href="/login" className="button button-small button-ghost">Log in</Link>
+          <Link href="/signup" className="button button-small">Sign up</Link>
+        </div>
       </div>
     </header>
   );
