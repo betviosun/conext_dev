@@ -16,7 +16,7 @@ type ChatMessage = {
 const WELCOME: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content: `Hi — I'm CoNext Assist. Ask me about our services, partnership models, or how ${site.shortName} supports cross-border talent and technology collaboration.`
+  content: `Hi, I'm the CoNext Assistant. How can I help you today?`
 };
 
 export function AssistWidget() {
@@ -91,13 +91,13 @@ export function AssistWidget() {
           <button
             type="button"
             className="assist-backdrop"
-            aria-label="Close assist chat"
+            aria-label="Close CoNext Assistant chat"
             onClick={() => setOpen(false)}
           />
-          <section className="assist-panel" aria-label="Assist chat" role="dialog" aria-modal="true">
+          <section className="assist-panel" aria-label="CoNext Assistant chat" role="dialog" aria-modal="true">
             <header className="assist-panel-header">
               <div>
-                <strong>CoNext Assist</strong>
+                <strong>CoNext Assistant</strong>
                 <p>AI guide for services, partnerships, and how we work.</p>
               </div>
             </header>
@@ -142,7 +142,7 @@ export function AssistWidget() {
         <button
           type="button"
           className="assist-launcher is-idle"
-          aria-label="Open assist chat"
+          aria-label="Open CoNext Assistant chat"
           aria-expanded={false}
           onClick={() => setOpen(true)}
         >
@@ -155,7 +155,7 @@ export function AssistWidget() {
             height={30}
             priority
           />
-          <span className="assist-launcher-label">Assist</span>
+          <span className="assist-launcher-label">Assistant</span>
         </button>
       )}
     </div>

@@ -48,6 +48,20 @@ function assist_http_error(string $message, int $status): never
     json_response(['ok' => false, 'error' => $message], $status);
 }
 
+function first_sentence(string $text): string
+{
+    $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+    if ($text === '') {
+        return $text;
+    }
+
+    if (preg_match('/^(.+?[.!?])(?:\s|$)/u', $text, $matches)) {
+        return trim($matches[1]);
+    }
+
+    return $text;
+}
+
 function generate_assist_reply(mixed $rawMessages): string
 {
     $config = assist_config();
@@ -63,7 +77,7 @@ function generate_assist_reply(mixed $rawMessages): string
     $payload = json_encode([
         'model' => $config['model'],
         'temperature' => 0.4,
-        'max_tokens' => 450,
+        'max_tokens' => 80,
         'messages' => array_merge(
             [['role' => 'system', 'content' => assist_system_prompt()]],
             $messages
@@ -89,7 +103,7 @@ function generate_assist_reply(mixed $rawMessages): string
             'Authorization: Bearer ' . $config['apiKey'],
             'Content-Type: application/json',
             'HTTP-Referer: ' . $frontendOrigin,
-            'X-Title: CoNext Assist',
+            'X-Title: CoNext Assistant',
         ],
         CURLOPT_POSTFIELDS => $payload,
         CURLOPT_CONNECTTIMEOUT => 15,
@@ -124,5 +138,5 @@ function generate_assist_reply(mixed $rawMessages): string
         assist_http_error('No response was generated. Please try again.', 502);
     }
 
-    return $reply;
+    return first_sentence($reply);
 }

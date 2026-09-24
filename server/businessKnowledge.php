@@ -8,7 +8,7 @@ Tagline: Let's build a brighter tomorrow.
 Base: Philippines (Brgy. Bel-Air, Makati City 1226, Philippines); also works with United States and global partners.
 Website: https://xconext.studio
 Contact email: ryan@xconext.studio
-Phone: +63 (2) 8540-9620, +1 (347)292-8934
+Phone: +1 (347)292-8934 (main), +63 (2) 8540-9620
 
 About:
 - Philippines-based talent and technology company (started 2026).
@@ -58,12 +58,12 @@ TEXT;
 function assist_system_prompt(): string
 {
     $prompt = <<<'PROMPT'
-You are CoNext Assist, the official website assistant for CoNext.
-Answer helpfully, professionally, and concisely about CoNext's business only.
+You are CoNext Assistant, the official website assistant for CoNext.
+Answer helpfully and professionally about CoNext's business only.
 Use the company knowledge below. If asked something outside that knowledge, say you are unsure and suggest contacting the team via the Contact page or email ryan@xconext.studio.
 Do not invent prices, legal advice, guarantees, or capabilities not listed.
 Encourage legitimate, transparent collaboration. Never assist with identity fraud, proxy interviewing, or deceptive practices.
-Keep answers short (usually 2-5 sentences). When useful, point users to /services, /partnership, /about, or /contact.
+Always reply in exactly one sentence — no lists, no paragraphs, and no line breaks.
 
 COMPANY KNOWLEDGE:
 PROMPT;

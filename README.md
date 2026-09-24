@@ -106,9 +106,9 @@ Each enquiry is appended to `server/data/contacts.csv` with:
 
 The CSV file is created automatically on the first submission.
 
-### CoNext Assist (AI chat)
+### CoNext Assistant (AI chat)
 
-The bottom-right Assist button opens an AI chat grounded in CoNext business content.
+The bottom-right Assistant button opens an AI chat grounded in CoNext business content.
 
 1. Add your OpenAI-compatible key to `server/.env` (OpenAI or OpenRouter):
 
