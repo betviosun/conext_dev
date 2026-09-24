@@ -10,6 +10,7 @@ require_once __DIR__ . '/lib/csv_store.php';
 require_once __DIR__ . '/lib/assist_chat.php';
 require_once __DIR__ . '/lib/live_chat.php';
 require_once __DIR__ . '/lib/job_applications.php';
+require_once __DIR__ . '/lib/auth.php';
 
 load_env(__DIR__ . '/.env');
 apply_cors();
@@ -202,6 +203,109 @@ if ($method === 'POST' && $path === '/api/jobs/apply') {
     } catch (Throwable $error) {
         error_log('[job-apply] ' . $error->getMessage());
         json_response(['ok' => false, 'error' => 'Unable to submit your application right now.'], 500);
+    }
+}
+
+if ($method === 'GET' && $path === '/api/auth/captcha') {
+    try {
+        $challenge = create_captcha_challenge();
+        json_response(['ok' => true, ...$challenge]);
+    } catch (Throwable $error) {
+        error_log('[auth-captcha] ' . $error->getMessage());
+        json_response(['ok' => false, 'error' => 'Unable to create captcha right now.'], 500);
+    }
+}
+
+if ($method === 'POST' && $path === '/api/auth/signup') {
+    $ip = client_ip();
+    if (rate_limited($ip)) {
+        json_response(['ok' => false, 'error' => 'Too many requests. Please try again shortly.'], 429);
+    }
+
+    try {
+        $body = read_json_body();
+        if (!empty($body['website'])) {
+            json_response(['ok' => true]);
+        }
+
+        if (empty($body['termsAccepted'])) {
+            json_response(['ok' => false, 'error' => 'Please accept the Terms & Conditions and Privacy Policy.'], 400);
+        }
+
+        $password = (string) ($body['password'] ?? '');
+        $confirmPassword = (string) ($body['confirmPassword'] ?? '');
+        if ($password !== $confirmPassword) {
+            json_response(['ok' => false, 'error' => 'Passwords do not match.'], 400);
+        }
+
+        $result = register_user(
+            clean_string($body['firstName'] ?? '', 80),
+            clean_string($body['lastName'] ?? '', 80),
+            clean_string($body['email'] ?? '', 180),
+            $password,
+            !empty($body['newsletter']),
+            clean_string($body['captchaId'] ?? '', 32),
+            clean_string($body['captchaAnswer'] ?? '', 16),
+            $ip
+        );
+        json_response(['ok' => true, ...$result]);
+    } catch (InvalidArgumentException $error) {
+        json_response(['ok' => false, 'error' => $error->getMessage()], 400);
+    } catch (Throwable $error) {
+        error_log('[auth-signup] ' . $error->getMessage());
+        json_response(['ok' => false, 'error' => 'Unable to create your account right now.'], 500);
+    }
+}
+
+if ($method === 'POST' && $path === '/api/auth/login') {
+    $ip = client_ip();
+    if (rate_limited($ip)) {
+        json_response(['ok' => false, 'error' => 'Too many requests. Please try again shortly.'], 429);
+    }
+
+    try {
+        $body = read_json_body();
+        if (!empty($body['website'])) {
+            json_response(['ok' => true]);
+        }
+
+        $result = login_user(
+            clean_string($body['email'] ?? '', 180),
+            (string) ($body['password'] ?? '')
+        );
+        json_response(['ok' => true, ...$result]);
+    } catch (InvalidArgumentException $error) {
+        json_response(['ok' => false, 'error' => $error->getMessage()], 400);
+    } catch (Throwable $error) {
+        error_log('[auth-login] ' . $error->getMessage());
+        json_response(['ok' => false, 'error' => 'Unable to log in right now.'], 500);
+    }
+}
+
+if ($method === 'GET' && $path === '/api/auth/me') {
+    try {
+        $user = current_user_from_request();
+        if ($user === null) {
+            json_response(['ok' => false, 'error' => 'Not authenticated.'], 401);
+        }
+
+        json_response(['ok' => true, 'user' => $user]);
+    } catch (Throwable $error) {
+        error_log('[auth-me] ' . $error->getMessage());
+        json_response(['ok' => false, 'error' => 'Unable to load your account right now.'], 500);
+    }
+}
+
+if ($method === 'POST' && $path === '/api/auth/logout') {
+    try {
+        $token = bearer_token_from_request();
+        if ($token !== '') {
+            delete_session($token);
+        }
+        json_response(['ok' => true]);
+    } catch (Throwable $error) {
+        error_log('[auth-logout] ' . $error->getMessage());
+        json_response(['ok' => false, 'error' => 'Unable to log out right now.'], 500);
     }
 }
 

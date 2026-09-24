@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AssistWidget } from "@/components/AssistWidget";
+import { AuthSuccessToast } from "@/components/AuthSuccessToast";
 import { site } from "@/config/site";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <main>{children}</main>
         <Footer />
         <AssistWidget />
+        <AuthSuccessToast />
       </body>
     </html>
   );

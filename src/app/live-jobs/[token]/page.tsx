@@ -30,13 +30,15 @@ export default async function JobDetailPage({ params }: Props) {
     <>
       <section className="page-hero">
         <div className="container narrow">
-          <Link href="/live-jobs" className="job-back-link">
-            ← Back to Live Jobs
-          </Link>
-          <span className="job-live-badge">
-            <span className="job-live-dot" aria-hidden="true" />
-            Live
-          </span>
+          <div className="job-hero-top">
+            <Link href="/live-jobs" className="job-back-link">
+              ← Back to Live Jobs
+            </Link>
+            <span className="job-live-badge">
+              <span className="job-live-dot" aria-hidden="true" />
+              Live
+            </span>
+          </div>
           <h1>{job.title}</h1>
           <p className="job-salary job-salary-hero">{job.salary}</p>
           <p className="job-meta job-meta-hero">

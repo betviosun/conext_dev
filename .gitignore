@@ -12,6 +12,9 @@ out/
 .env.*.local
 server/.env
 
+# typescript
+*.tsbuildinfo
+
 # misc
 .DS_Store
 *.log

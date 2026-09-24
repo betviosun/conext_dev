@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { HeaderAuth } from "./HeaderAuth";
 
 const nav = [
   ["About", "/about"],
@@ -23,8 +24,7 @@ export function Header() {
             <span className="nav-live-dot" aria-hidden="true" />
             Live Jobs
           </Link>
-          <Link href="/login" className="button button-small button-ghost">Log in</Link>
-          <Link href="/signup" className="button button-small">Sign up</Link>
+          <HeaderAuth />
         </div>
       </div>
     </header>
