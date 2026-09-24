@@ -25,7 +25,7 @@ export default function Home() {
         </div>
         <div className="container">
           <div className="hero-copy">
-            <span className="eyebrow">Singapore · United States · Global</span>
+            <span className="eyebrow">Philippines · United States · Global</span>
             <h1>Connecting talent, technology, and opportunity.</h1>
             <p><strong>CoNext</strong> connects talented people, technology, and opportunities across borders to create meaningful partnerships and long-term growth. We believe the right connection can open new possibilities and help build a brighter tomorrow.</p>
             <div className="hero-actions">
@@ -41,7 +41,7 @@ export default function Home() {
 
       <section className="trust-strip">
         <div className="container trust-grid">
-          <div><strong>Singapore based</strong><span>Built for international collaboration</span></div>
+          <div><strong>Philippines based</strong><span>Built for international collaboration</span></div>
           <div><strong>Software focused</strong><span>Technology and digital talent markets</span></div>
           <div><strong>Partnership first</strong><span>Commercial terms agreed before work begins</span></div>
           <div><strong>Identity integrity</strong><span>Participants act only in their authorized role</span></div>

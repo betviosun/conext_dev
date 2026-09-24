@@ -21,7 +21,15 @@ export function Footer() {
         <div>
           <h3>Contact</h3>
           <a href={`mailto:${site.email}`} className="contact-line"><MailIcon size={17}/>{site.email}</a>
-          <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="contact-line"><PhoneIcon size={17}/>{site.phone}</a>
+          <span className="contact-line">
+            <PhoneIcon size={17}/>
+            {site.phones.map((phone, index) => (
+              <span key={phone}>
+                {index > 0 && ", "}
+                <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{phone}</a>
+              </span>
+            ))}
+          </span>
           <span className="contact-line"><PinIcon size={17}/>{site.location}</span>
         </div>
       </div>

@@ -65,7 +65,18 @@ export function ContactPanel() {
         <p>Tell us what you are trying to achieve. We will respond with a clear scope, responsibilities, and next step.</p>
         <div className="contact-details">
           <a href={`mailto:${site.email}`}><MailIcon/><span><small>Email</small>{site.email}</span></a>
-          <a href={`tel:${site.phone.replace(/\s/g, "")}`}><PhoneIcon/><span><small>Telephone</small>{site.phone}</span></a>
+          <div>
+            <PhoneIcon/>
+            <span>
+              <small>Telephone</small>
+              {site.phones.map((phone, index) => (
+                <span key={phone}>
+                  {index > 0 && ", "}
+                  <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{phone}</a>
+                </span>
+              ))}
+            </span>
+          </div>
           <div><PinIcon/><span><small>Location</small>{site.location}</span></div>
         </div>
       </div>

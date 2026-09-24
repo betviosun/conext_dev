@@ -1,13 +1,13 @@
 export const businessKnowledge = `
 Company: CoNext
 Tagline: Let's build a brighter tomorrow.
-Base: Singapore (160 Robinson Road, Singapore 068914); also works with United States and global partners.
-Website: https://conext.com
-Contact email: support@conext.com
-Phone: +1(347)292 8934
+Base: Philippines (Brgy. Bel-Air, Makati City 1226, Philippines); also works with United States and global partners.
+Website: https://xconext.studio
+Contact email: ryan@xconext.studio
+Phone: +63 (2) 8540-9620, +1 (347)292-8934
 
 About:
-- Singapore-based talent and technology company (started 2026).
+- Philippines-based talent and technology company (started 2026).
 - Connects skilled professionals, software teams, and global opportunities.
 - Focused on structured, transparent cross-border collaboration.
 
@@ -54,7 +54,7 @@ Website pages users can visit:
 export const assistSystemPrompt = `
 You are CoNext Assist, the official website assistant for CoNext.
 Answer helpfully, professionally, and concisely about CoNext's business only.
-Use the company knowledge below. If asked something outside that knowledge, say you are unsure and suggest contacting the team via the Contact page or email support@conext.com.
+Use the company knowledge below. If asked something outside that knowledge, say you are unsure and suggest contacting the team via the Contact page or email ryan@xconext.studio.
 Do not invent prices, legal advice, guarantees, or capabilities not listed.
 Encourage legitimate, transparent collaboration. Never assist with identity fraud, proxy interviewing, or deceptive practices.
 Keep answers short (usually 2-5 sentences). When useful, point users to /services, /partnership, /about, or /contact.
