@@ -15,7 +15,7 @@ export default function ContactPage() {
         text="Whether you have an idea to share, a partnership to explore, or a question about how CoNext works — we're here. Reach out and let's figure out what comes next, together."
         image={{
           src: "/brand/contact-conversation.png",
-          alt: "Person reaching out to start a conversation with CoNext"
+          alt: "Two people starting a conversation by phone and email"
         }}
       />
       <section className="section">

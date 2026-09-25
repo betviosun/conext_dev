@@ -18,12 +18,12 @@ export function Header() {
         </Link>
         <nav className="nav-links" aria-label="Primary navigation">
           {nav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
-        </nav>
-        <div className="nav-actions">
           <Link href="/live-jobs" className="nav-live-jobs">
             <span className="nav-live-dot" aria-hidden="true" />
             Live Jobs
           </Link>
+        </nav>
+        <div className="nav-actions">
           <HeaderAuth />
         </div>
       </div>
