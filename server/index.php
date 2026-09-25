@@ -257,6 +257,35 @@ if ($method === 'POST' && $path === '/api/auth/signup') {
     }
 }
 
+if ($method === 'POST' && $path === '/api/auth/google') {
+    $ip = client_ip();
+    if (rate_limited($ip)) {
+        json_response(['ok' => false, 'error' => 'Too many requests. Please try again shortly.'], 429);
+    }
+
+    try {
+        $body = read_json_body();
+        if (!empty($body['website'])) {
+            json_response(['ok' => true]);
+        }
+
+        $intent = ($body['intent'] ?? '') === 'signup' ? 'signup' : 'login';
+        $result = authenticate_with_google(
+            trim((string) ($body['credential'] ?? '')),
+            $ip,
+            $intent
+        );
+        json_response(['ok' => true, ...$result]);
+    } catch (InvalidArgumentException $error) {
+        json_response(['ok' => false, 'error' => $error->getMessage()], 400);
+    } catch (RuntimeException $error) {
+        json_response(['ok' => false, 'error' => $error->getMessage()], 503);
+    } catch (Throwable $error) {
+        error_log('[auth-google] ' . $error->getMessage());
+        json_response(['ok' => false, 'error' => 'Unable to sign in with Google right now.'], 500);
+    }
+}
+
 if ($method === 'POST' && $path === '/api/auth/login') {
     $ip = client_ip();
     if (rate_limited($ip)) {

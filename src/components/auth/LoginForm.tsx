@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { AlertIcon } from "../Icons";
+import { GoogleAuthButton } from "./GoogleAuthButton";
 import { PasswordField } from "./PasswordField";
 import { queueAuthSuccessToast } from "@/components/AuthSuccessToast";
 import { login, storeSession } from "@/lib/auth";
@@ -74,12 +75,14 @@ export function LoginForm() {
       </div>
 
       <div className="auth-social">
-        <button type="button" className="auth-social-btn" disabled title="Coming soon">
-          Authorize with Google
-        </button>
-        <button type="button" className="auth-social-btn" disabled title="Coming soon">
-          Authorize with Facebook
-        </button>
+        <GoogleAuthButton
+          mode="login"
+          disabled={status === "submitting"}
+          onError={(message) => {
+            setStatus("error");
+            setError(message);
+          }}
+        />
       </div>
 
       {status === "error" && (

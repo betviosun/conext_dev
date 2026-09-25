@@ -86,6 +86,39 @@ export async function signup(payload: {
   return result.user;
 }
 
+export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+
+export function isGoogleConfigured(): boolean {
+  const clientId = GOOGLE_CLIENT_ID.trim();
+  return (
+    clientId !== "" &&
+    !clientId.includes("your-google-client-id") &&
+    clientId.endsWith(".apps.googleusercontent.com")
+  );
+}
+
+export async function loginWithGoogle(
+  credential: string,
+  intent: "login" | "signup" = "login"
+): Promise<AuthSession & { isNewUser: boolean }> {
+  const result = await authFetch<{
+    token: string;
+    expiresAt: string;
+    user: AuthUser;
+    isNewUser: boolean;
+  }>("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential, intent })
+  });
+
+  return {
+    token: result.token,
+    expiresAt: result.expiresAt,
+    user: result.user,
+    isNewUser: Boolean(result.isNewUser)
+  };
+}
+
 export async function login(payload: {
   email: string;
   password: string;

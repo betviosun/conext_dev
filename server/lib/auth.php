@@ -125,11 +125,139 @@ function find_user_by_id(string $id): ?array
     return null;
 }
 
+function find_user_by_google_id(string $googleId): ?array
+{
+    if ($googleId === '') {
+        return null;
+    }
+
+    foreach (read_json_store(users_file_path()) as $user) {
+        if (is_array($user) && (($user['google_id'] ?? '') === $googleId)) {
+            return $user;
+        }
+    }
+
+    return null;
+}
+
 function save_user(array $user): void
 {
     $users = read_json_store(users_file_path());
     $users[] = $user;
     write_json_store(users_file_path(), $users);
+}
+
+function update_user_record(string $id, callable $mutator): array
+{
+    $users = read_json_store(users_file_path());
+    $updated = null;
+
+    foreach ($users as $index => $user) {
+        if (!is_array($user) || (($user['id'] ?? '') !== $id)) {
+            continue;
+        }
+
+        $users[$index] = $mutator($user);
+        $updated = $users[$index];
+        break;
+    }
+
+    if ($updated === null) {
+        throw new RuntimeException('User not found.');
+    }
+
+    write_json_store(users_file_path(), $users);
+
+    return $updated;
+}
+
+function google_client_id(): string
+{
+    return trim(env('GOOGLE_CLIENT_ID', '') ?? '');
+}
+
+function verify_google_id_token(string $idToken): array
+{
+    $clientId = google_client_id();
+    if ($clientId === '') {
+        throw new RuntimeException('Google sign-in is not configured.');
+    }
+
+    if ($idToken === '') {
+        throw new InvalidArgumentException('Google credential is required.');
+    }
+
+    $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($idToken);
+    $ch = curl_init($url);
+    if ($ch === false) {
+        throw new RuntimeException('Unable to verify Google credential.');
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 15,
+    ]);
+
+    $responseBody = curl_exec($ch);
+    $statusCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($responseBody === false || $statusCode < 200 || $statusCode >= 300) {
+        throw new InvalidArgumentException('Google credential could not be verified.');
+    }
+
+    $payload = json_decode($responseBody, true);
+    if (!is_array($payload)) {
+        throw new InvalidArgumentException('Invalid Google credential response.');
+    }
+
+    if (($payload['aud'] ?? '') !== $clientId) {
+        throw new InvalidArgumentException('Invalid Google credential audience.');
+    }
+
+    $issuer = (string) ($payload['iss'] ?? '');
+    if (!in_array($issuer, ['accounts.google.com', 'https://accounts.google.com'], true)) {
+        throw new InvalidArgumentException('Invalid Google credential issuer.');
+    }
+
+    if ((string) ($payload['email_verified'] ?? 'false') !== 'true') {
+        throw new InvalidArgumentException('Google email address is not verified.');
+    }
+
+    if ((int) ($payload['exp'] ?? 0) < time()) {
+        throw new InvalidArgumentException('Google credential expired.');
+    }
+
+    return $payload;
+}
+
+function google_name_parts(array $payload): array
+{
+    $firstName = clean_string($payload['given_name'] ?? '', 80);
+    $lastName = clean_string($payload['family_name'] ?? '', 80);
+
+    if ($firstName === '' || $lastName === '') {
+        $fullName = clean_string($payload['name'] ?? '', 160);
+        if ($fullName !== '') {
+            $parts = preg_split('/\s+/', $fullName, 2) ?: [];
+            if ($firstName === '' && !empty($parts[0])) {
+                $firstName = clean_string($parts[0], 80);
+            }
+            if ($lastName === '' && !empty($parts[1])) {
+                $lastName = clean_string($parts[1], 80);
+            }
+        }
+    }
+
+    if ($firstName === '') {
+        $firstName = 'Google';
+    }
+    if ($lastName === '') {
+        $lastName = 'User';
+    }
+
+    return [$firstName, $lastName];
 }
 
 function create_captcha_challenge(): array
@@ -316,7 +444,8 @@ function login_user(string $email, string $password): array
     }
 
     $user = find_user_by_email($email);
-    if ($user === null || !password_verify($password, (string) ($user['password_hash'] ?? ''))) {
+    $passwordHash = (string) ($user['password_hash'] ?? '');
+    if ($user === null || $passwordHash === '' || !password_verify($password, $passwordHash)) {
         throw new InvalidArgumentException('Invalid email or password.');
     }
 
@@ -326,6 +455,86 @@ function login_user(string $email, string $password): array
         'token' => $session['token'],
         'expiresAt' => gmdate('c', $session['expires_at']),
         'user' => public_user($user),
+    ];
+}
+
+function google_account_exists(string $googleId, string $email): ?array
+{
+    $byGoogleId = find_user_by_google_id($googleId);
+    if ($byGoogleId !== null) {
+        return $byGoogleId;
+    }
+
+    return find_user_by_email($email);
+}
+
+function create_google_user(string $googleId, string $email, string $firstName, string $lastName, string $ip): array
+{
+    $existing = google_account_exists($googleId, $email);
+    if ($existing !== null) {
+        throw new InvalidArgumentException('An account with this email already exists.');
+    }
+
+    $user = [
+        'id' => bin2hex(random_bytes(16)),
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'email' => $email,
+        'password_hash' => '',
+        'google_id' => $googleId,
+        'newsletter' => false,
+        'created_at' => gmdate('c'),
+        'ip' => $ip,
+    ];
+    save_user($user);
+
+    return $user;
+}
+
+function authenticate_with_google(string $idToken, string $ip, string $intent = 'login'): array
+{
+    $payload = verify_google_id_token($idToken);
+    $googleId = clean_string($payload['sub'] ?? '', 64);
+    $email = normalize_email((string) ($payload['email'] ?? ''));
+
+    if ($googleId === '' || !is_email($email)) {
+        throw new InvalidArgumentException('Google account details are incomplete.');
+    }
+
+    [$firstName, $lastName] = google_name_parts($payload);
+    $intent = $intent === 'signup' ? 'signup' : 'login';
+    $existingUser = google_account_exists($googleId, $email);
+    $isNewUser = false;
+
+    if ($intent === 'signup') {
+        if ($existingUser !== null) {
+            throw new InvalidArgumentException('An account with this email already exists. Please log in.');
+        }
+
+        $user = create_google_user($googleId, $email, $firstName, $lastName, $ip);
+        $isNewUser = true;
+    } else {
+        if ($existingUser !== null) {
+            $user = $existingUser;
+            if (($user['google_id'] ?? '') === '') {
+                $user = update_user_record((string) $user['id'], static function (array $record) use ($googleId): array {
+                    $record['google_id'] = $googleId;
+                    return $record;
+                });
+            }
+        } else {
+            $user = create_google_user($googleId, $email, $firstName, $lastName, $ip);
+            $isNewUser = true;
+        }
+    }
+
+    $session = create_session((string) $user['id']);
+
+    return [
+        'token' => $session['token'],
+        'expiresAt' => gmdate('c', $session['expires_at']),
+        'user' => public_user($user),
+        'isNewUser' => $isNewUser,
     ];
 }
 
