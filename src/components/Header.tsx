@@ -5,7 +5,7 @@ import { HeaderAuth } from "./HeaderAuth";
 const nav = [
   ["About", "/about"],
   ["Services", "/services"],
-  ["Partnership", "/partnership"],
+  ["Products", "/products"],
   ["Contact", "/contact"]
 ] as const;
 

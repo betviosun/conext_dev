@@ -51,7 +51,7 @@ Before starting a partnership, CoNext clarifies:
 Website pages users can visit:
 - /about
 - /services
-- /partnership
+- /products
 - /contact
 TEXT;
 

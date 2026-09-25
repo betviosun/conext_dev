@@ -28,7 +28,7 @@ type LiveMessage = {
 const WELCOME: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content: "Hi, I'm the CoNext Assistant. How can I help you today?"
+  content: "Hi — I'm the CoNext Assistant. Ask about submitting an idea, co-creation partnerships, or how we connect ideas to what comes next."
 };
 
 function liveToUiMessage(message: LiveMessage): ChatMessage {
